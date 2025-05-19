@@ -24,9 +24,8 @@ Windows 10 and above.
 Launch the app using ``RMW.exe``.
 
 Arguments:
-``--minimized`` - will launch the app minimized to tray.
-
-Note that the app will automatically start minimized when "Auto-run at boot" is enabled.
+- ``--minimized`` - will launch the app minimized to tray.
+(Note that the app will automatically start minimized when "Auto-run at boot" is enabled.)
 
 ## Authors
 
