@@ -1,13 +1,13 @@
-# Reddit Magnet Watcher
+# RMWatcher
 
 ## Description
 
-A simple app written in C# for periodically checking for updates to Reddit pages with magnet and/or torrent links (where RSS will not work). If changes to the post is detected, it automatically opens the magnet (or .torrent) in your associated app.
+A simple app written in C# for periodically checking for updates on Reddit pages with magnet and/or torrent links (where RSS will not work). If changes to the post are detected, it automatically opens the magnet (or .torrent) in your associated app.
 
 **Planned features**:
 - Support for qBittorrent's Web API
 - Linux support
-- Support for other sites down the line using manual JSON .
+- Support for other sites down the line using manual JSON.
 
 ### Requirements
 
@@ -21,7 +21,7 @@ Windows 10 or above.
 
 ### Executing program
 
-Launch the app using ``RMW.exe``.
+Launch the app using ``RMWatcher.exe``.
 
 Arguments:
 - Using the ``--minimized`` argument will launch the app minimized to tray.
@@ -34,7 +34,7 @@ Ji Svartklint (spamb0t)
 
 ## Version History
 
-* 0.2-pre-alpha
+* 0.2-alpha
     * Initial release
 
 ## License
