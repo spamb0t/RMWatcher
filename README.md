@@ -9,9 +9,9 @@ A simple app written in C# for periodically checking for updates to Reddit pages
 - Linux support
 - Support for other sites down the line using manual JSON .
 
-### Dependencies
+### Requirements
 
-Windows 10 and above.
+Windows 10 or above.
 
 ### Installing & Launching the app
 
@@ -24,7 +24,7 @@ Windows 10 and above.
 Launch the app using ``RMW.exe``.
 
 Arguments:
-- ``--minimized`` - will launch the app minimized to tray.
+- Using the ``--minimized`` argument will launch the app minimized to tray.
 
 *(Note that the app will automatically start minimized when "Auto-run at boot" is enabled.)*
 
@@ -34,7 +34,7 @@ Ji Svartklint (spamb0t)
 
 ## Version History
 
-* 0.1-pre-alpha
+* 0.2-pre-alpha
     * Initial release
 
 ## License
