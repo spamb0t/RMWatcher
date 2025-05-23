@@ -7,8 +7,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon>RMWatcher.ico</ApplicationIcon>
+    <ApplicationIcon>Appicon.ico</ApplicationIcon>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Appicon.ico" />
+    <None Remove="RMWatcher.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="RMWatcher.ico">
@@ -19,6 +25,10 @@
   <ItemGroup>
 	<FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
 	<FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Appicon.ico" />
   </ItemGroup>
 
 
