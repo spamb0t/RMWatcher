@@ -2,7 +2,7 @@
 
 ## Description
 
-**RMWatcher** is a simple Windows utility (written in C#) for periodically checking for updates to Reddit posts that contain magnet and/or torrent links (useful where RSS won't work). If a post is updated, RMWatcher automatically opens the magnet or `.torrent` link with your associated app.
+**RMWatcher** is a Windows utility (written in C#) for monitoring Reddit posts (and soon any website) for updates containing magnet or `.torrent` links. If a change is detected, RMWatcher automatically opens the link in your default torrent application.
 
 ---
 
@@ -10,33 +10,32 @@
 
 - Support for qBittorrent's Web API
 - Linux support
-- Support for other sites via manual JSON
+- Ability to monitor any website section:  
+  Paste a URL and use a visual wizard to select which part of the page (element with a magnet/torrent link) you want to monitor—no technical knowledge required.
 
 ---
 
 ## Requirements
 
 - **Windows 10 version 1809 (October 2018 update, build 17763) or later**
-- **No .NET installation required — all dependencies are included with the download**
+- **No .NET installation required** — all dependencies are included with the download
 
 ---
 
 ## Installing & Launching
 
-1. Download and run either `RMW_setup_winx64.exe` or `RMW_setup_winx86.exe`, depending on your system.
-2. Choose your preferred installation directory.
+1. Download the latest installer for your system (x64 or x86) from the [Releases](../../releases) page.
+2. Run the installer and choose your preferred installation directory.
 3. Optionally create desktop or Start Menu shortcuts during setup.
 4. Click "Install".
 
----
-
 ## Usage
 
-- You can launch RMWatcher using `RMWatcher.exe` from the installation folder.
-- If you created shortcuts during install, use those for easier access.
+- Launch RMWatcher from the folder you installed it to, or from any shortcut you created during installation.
 
 **Command-line arguments:**
-> `--minimized` &nbsp; Launches the app minimized to the system tray.  
+> `--minimized`  
+> Launches the app minimized to the system tray.  
 > <sub>*(The app also starts minimized automatically if "Auto-run at boot" is enabled.)*</sub>
 
 ---
