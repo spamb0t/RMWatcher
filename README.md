@@ -24,7 +24,7 @@
 
 ## Installing & Launching
 
-1. Download the latest installer for your system (x64 or x86) from the [Releases](../../releases) page.
+1. Download the latest installer from the [Releases](../../releases) page.
 2. Run the installer and choose your preferred installation directory.
 3. Optionally create desktop or Start Menu shortcuts during setup.
 4. Click "Install".
@@ -48,7 +48,10 @@
 
 ## Version History
 
-- **0.2-alpha**  
+- **0.2.1-alpha**
+	- Fixed crash on startup due to WPF Window / Tray icon conflict
+
+- **0.2.0-alpha**  
     - Initial release
 
 ---
