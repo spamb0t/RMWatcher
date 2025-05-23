@@ -257,7 +257,9 @@ namespace RMWatcher
                 AutoRun = autoRun,
                 CloseToTray = closeToTray
             };
-            File.WriteAllText(SettingsFile, System.Text.Json.JsonSerializer.Serialize(data));
+            //Ensure the directory for the settings file exists
+            Directory.CreateDirectory(Path.GetDirectoryName(SettingsFile));
+            File.WriteAllText(SettingsFile, JsonSerializer.Serialize(data));
         }
 
         private void LoadSettings()
