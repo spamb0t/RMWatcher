@@ -21,7 +21,8 @@ namespace RMWatcher
         private bool autoRun = false;
         private bool closeToTray = false;
         private const string AppName = "RMWatcher";
-        private const string SettingsFile = "settings.json";
+        private static string SettingsFile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RMWatcher", "settings.json");
+
         private const string RunRegKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
 
         // == MONITORING STATE ==
