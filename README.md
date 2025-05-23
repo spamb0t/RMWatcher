@@ -42,4 +42,4 @@ Ji Svartklint (spamb0t)
 This project is licensed under the CC BY-NC 4.0 License.
 [https://creativecommons.org/licenses/by-nc/4.0/](https://creativecommons.org/licenses/by-nc/4.0/)
 
-This means you are free to share and modify the code as long as it's not for commersial use.
+This means you are free to share and modify the code as long as it's not for commercial use.
