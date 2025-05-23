@@ -10,12 +10,12 @@ A simple app written in C# for periodically checking for updates on Reddit pages
 - Support for other sites down the line using manual JSON.
 
 ### Requirements
-
-Windows 10 or above.
+- Windows 10 version 1809 (October 2018 update, build 17763) or later.
+- No .NET installation required — all dependencies are included with the download.
 
 ### Installing & Launching the app
 
-1. Just run the installer - ``RMW_installer_winx64.exe`` or ``RMW_installer_winx86.exe`` depending on what version you want.
+1. Just run the installer - ``RMW_setup_winx64.exe`` or ``RMW_setup_winx86.exe`` depending on what version you want.
 2. Choose where to install it the app.
 3. Click "Install".
 
