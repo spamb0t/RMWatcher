@@ -58,7 +58,7 @@
 
 ## Feedback & Bug Reports
 
-Have a question, found a bug, or want to suggest a new feature or even collaborate?  
+Have a question, found a bug, or want to suggest a new feature (or even collaborate)?  
 **Please use the [Issues](../../issues) tab on GitHub** to report problems or share ideas.  
 All feedback is welcome!
 
