@@ -56,6 +56,14 @@
 
 ---
 
+## Feedback & Bug Reports
+
+Have a question, found a bug, or want to suggest a new feature (or even collaborate)?
+**Please use the [Issues](../../issues) tab on GitHub** to report problems or share ideas.
+All feedback is welcome!
+
+---
+
 ## License
 
 This project is licensed under the [CC BY-NC 4.0 License](https://creativecommons.org/licenses/by-nc/4.0/).
