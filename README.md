@@ -56,6 +56,14 @@
 
 ---
 
+## Feedback & Bug Reports
+
+Found a bug? Do you have a suggestion, or want to request a feature (or even collaborate)?
+**Please use the [Issues](../../issues) tab on GitHub** to report problems or share ideas.
+All feedback is welcome — let’s make RMWatcher better together!
+
+---
+
 ## License
 
 This project is licensed under the [CC BY-NC 4.0 License](https://creativecommons.org/licenses/by-nc/4.0/).
