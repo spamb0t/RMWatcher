@@ -60,7 +60,7 @@
 
 Have a question, found a bug, or want to suggest a new feature (or even collaborate)?  
 **Please use the [Issues](../../issues) tab on GitHub** to report problems or share ideas.  
-You can also send in suggestions or bug reports to [suggestions@svartklint.se](mailto:suggestions@svartklint.se).
+You can also send in suggestions or bug reports to [suggestions@svartklint.se](mailto:suggestions@svartklint.se).  
 All feedback is welcome!
 
 ---
