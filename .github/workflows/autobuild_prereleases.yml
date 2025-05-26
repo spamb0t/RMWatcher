@@ -40,12 +40,14 @@ jobs:
     # 3. Download all your NuGet dependencies
     # ------------------------------------------------------------
     - name: Restore dependencies
+      shell: pwsh
       run: dotnet restore RMWatcher.sln
 
     # ------------------------------------------------------------
     # 4. Build the app in Release mode (faster, optimized, ready for publishing)
     # ------------------------------------------------------------
     - name: Build in Release mode
+      shell: pwsh
       run: dotnet build RMWatcher.sln --configuration Release --no-restore
 
     # ------------------------------------------------------------
@@ -54,6 +56,7 @@ jobs:
     #    - Output goes into the 'publish' folder
     # ------------------------------------------------------------
     - name: Publish self-contained app (Win-x64, single file)
+      shell: pwsh
       run: dotnet publish RMWatcher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish
 
     # ------------------------------------------------------------
@@ -61,10 +64,12 @@ jobs:
     #    - So the installer can include them and the app uses the right icon
     # ------------------------------------------------------------
     - name: Copy LICENSE as LICENSE.txt
-      run: copy LICENSE publish\LICENSE.txt
+      shell: pwsh
+      run: Copy-Item LICENSE publish\LICENSE.txt -Force
 
     - name: Copy single Appicon.ico to build dir
-      run: copy Appicon.ico publish\Appicon.ico
+      shell: pwsh
+      run: Copy-Item Appicon.ico publish\Appicon.ico -Force
 
     # ------------------------------------------------------------
     # 7. Convert README.md to README.txt for the installer
@@ -94,6 +99,7 @@ jobs:
           EOF
 
     - name: Generate README.txt
+      shell: pwsh
       run: python convert_readme.py
 
     # ------------------------------------------------------------
@@ -126,6 +132,7 @@ jobs:
     #    - Only needs one .ico file for both app and installer
     # ------------------------------------------------------------
     - name: Generate Inno Setup script
+      shell: cmd
       run: |
         echo ; RMWatcher installer script > RMWatcher.iss
         echo [Setup] >> RMWatcher.iss
@@ -180,6 +187,7 @@ jobs:
     #     - Uses Chocolatey, a package manager for Windows
     # ------------------------------------------------------------
     - name: Install Inno Setup
+      shell: pwsh
       run: choco install innosetup --no-progress
 
     # ------------------------------------------------------------
@@ -187,6 +195,7 @@ jobs:
     #     - Output will be Output\RMWatcher_setup_x64_<version>.exe
     # ------------------------------------------------------------
     - name: Build Installer
+      shell: pwsh
       run: iscc RMWatcher.iss
 
     # ------------------------------------------------------------
