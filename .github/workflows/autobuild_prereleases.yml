@@ -1,0 +1,204 @@
+# ================================================================
+# RMWatcher Pre-release/Nightly Build Workflow
+# ------------------------------------------------
+# This workflow:
+# - Runs ONLY when a tag like 'nightly-2024-05-25' or 'pre-0.3.0-alpha' is pushed
+# - Builds your app, generates a versioned installer, and uploads it to GitHub Releases as a pre-release
+# - Fully self-contained; does not depend on any extra scripts in your repo
+# ================================================================
+
+name: Nightly/Pre-Release Build & Installer for RMWatcher
+
+on:
+  push:
+    # This triggers the workflow only when a tag that starts with "nightly-" or "pre-" is pushed
+    tags:
+      - 'nightly-*'
+      - 'pre-*'
+  workflow_dispatch:   # (Optional) Allows you to trigger this manually from the GitHub UI if you ever need to
+
+jobs:
+  build:
+    runs-on: windows-latest    # This tells GitHub to use the latest Windows runner VM (needed for WPF and Inno Setup)
+
+    steps:
+    # ------------------------------------------------------------
+    # 1. Get all your project files from GitHub
+    # ------------------------------------------------------------
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # ------------------------------------------------------------
+    # 2. Install .NET 8 SDK (the tools needed to build/publish your app)
+    # ------------------------------------------------------------
+    - name: Set up .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x   # Use .NET 8 (change to your real target if needed)
+
+    # ------------------------------------------------------------
+    # 3. Download all your NuGet dependencies
+    # ------------------------------------------------------------
+    - name: Restore dependencies
+      run: dotnet restore RMWatcher.sln
+
+    # ------------------------------------------------------------
+    # 4. Build the app in Release mode (faster, optimized, ready for publishing)
+    # ------------------------------------------------------------
+    - name: Build in Release mode
+      run: dotnet build RMWatcher.sln --configuration Release --no-restore
+
+    # ------------------------------------------------------------
+    # 5. Publish your app as a single-file, self-contained Win-x64 EXE
+    #    - This makes sure end-users don't need .NET installed
+    #    - Output goes into the 'publish' folder
+    # ------------------------------------------------------------
+    - name: Publish self-contained app (Win-x64, single file)
+      run: dotnet publish RMWatcher/RMWatcher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish
+
+    # ------------------------------------------------------------
+    # 6. Copy LICENSE and Appicon.ico to the output folder
+    #    - So the installer can include them and the app uses the right icon
+    # ------------------------------------------------------------
+    - name: Copy LICENSE as LICENSE.txt
+      run: copy LICENSE publish\LICENSE.txt
+
+    - name: Copy single Appicon.ico to build dir
+      run: copy Appicon.ico publish\Appicon.ico
+
+    # ------------------------------------------------------------
+    # 7. Convert README.md to README.txt for the installer
+    #    - This creates a temporary Python script that turns your markdown README
+    #      into a readable ASCII text file (removes formatting, headers get lines, etc.)
+    # ------------------------------------------------------------
+    - name: Generate markdown-to-ASCII README converter
+      run: |
+        echo import re > convert_readme.py
+        echo. >> convert_readme.py
+        echo def md_to_ascii(txt): >> convert_readme.py
+        echo.    txt = re.sub(r'^# (.+)$', lambda m: f"\n{'='*len(m.group(1))}\n{m.group(1).upper()}\n{'='*len(m.group(1))}\n", txt, flags=re.MULTILINE) >> convert_readme.py
+        echo.    txt = re.sub(r'^## (.+)$', lambda m: f"\n{m.group(1)}\n{'-'*len(m.group(1))}\n", txt, flags=re.MULTILINE) >> convert_readme.py
+        echo.    txt = re.sub(r'^[-*] ', '• ', txt, flags=re.MULTILINE) >> convert_readme.py
+        echo.    txt = txt.replace('```', '') >> convert_readme.py
+        echo.    txt = re.sub(r'[*_]{1,2}', '', txt) >> convert_readme.py
+        echo.    txt = re.sub(r'\n{3,}', '\n\n', txt) >> convert_readme.py
+        echo.    return txt.strip() >> convert_readme.py
+        echo. >> convert_readme.py
+        echo with open("README.md", "r", encoding="utf-8") as f: >> convert_readme.py
+        echo.    md = f.read() >> convert_readme.py
+        echo out = md_to_ascii(md) >> convert_readme.py
+        echo with open("publish/README.txt", "w", encoding="utf-8") as f: >> convert_readme.py
+        echo.    f.write(out) >> convert_readme.py
+
+    - name: Generate README.txt
+      run: python convert_readme.py
+
+    # ------------------------------------------------------------
+    # 8. Extract the version number from your tag
+    #    - If your tag is 'nightly-2024-05-25', version becomes '2024-05-25'
+    #    - If your tag is 'pre-0.3.0-alpha', version becomes '0.3.0-alpha'
+    # ------------------------------------------------------------
+    - name: Extract version from tag
+      id: extract_version
+      run: |
+        # Remove the known prefixes (nightly- or pre-) from the tag
+        tag="${GITHUB_REF_NAME}"
+        version="${tag#nightly-}"
+        version="${version#pre-}"
+        echo "version=$version" >> $GITHUB_OUTPUT
+
+    # ------------------------------------------------------------
+    # 9. Create the Inno Setup installer script on the fly
+    #    - Uses the version from the previous step for both display and output filename
+    #    - Only needs one .ico file for both app and installer
+    # ------------------------------------------------------------
+    - name: Generate Inno Setup script
+      run: |
+        echo ; RMWatcher installer script > RMWatcher.iss
+        echo [Setup] >> RMWatcher.iss
+        echo AppId={{24111A6E-A921-4C78-B4D3-B0F4C26B32AA}} >> RMWatcher.iss
+        echo AppName=RMWatcher >> RMWatcher.iss
+        echo AppVersion=${{ steps.extract_version.outputs.version }} >> RMWatcher.iss
+        echo AppPublisher=spamb0t >> RMWatcher.iss
+        echo AppPublisherURL=https://github.com/spamb0t/RMWatcher >> RMWatcher.iss
+        echo AppSupportURL=https://github.com/spamb0t/RMWatcher >> RMWatcher.iss
+        echo AppUpdatesURL=https://github.com/spamb0t/RMWatcher >> RMWatcher.iss
+        echo DefaultDirName={autopf}\RMWatcher >> RMWatcher.iss
+        echo UninstallDisplayIcon={app}\RMWatcher.exe >> RMWatcher.iss
+        echo ArchitecturesAllowed=x64compatible >> RMWatcher.iss
+        echo ArchitecturesInstallIn64BitMode=x64compatible >> RMWatcher.iss
+        echo DefaultGroupName=RMWatcher >> RMWatcher.iss
+        echo AllowNoIcons=yes >> RMWatcher.iss
+        echo LicenseFile=publish\LICENSE.txt >> RMWatcher.iss
+        echo InfoAfterFile=publish\README.txt >> RMWatcher.iss
+        echo PrivilegesRequired=admin >> RMWatcher.iss
+        echo OutputDir=Output >> RMWatcher.iss
+        echo OutputBaseFilename=RMWatcher_setup_x64_${{ steps.extract_version.outputs.version }} >> RMWatcher.iss
+        echo SetupIconFile=publish\Appicon.ico >> RMWatcher.iss
+        echo SolidCompression=yes >> RMWatcher.iss
+        echo WizardStyle=modern >> RMWatcher.iss
+        echo. >> RMWatcher.iss
+        echo [Languages] >> RMWatcher.iss
+        echo Name: "english"; MessagesFile: "compiler:Default.isl" >> RMWatcher.iss
+        echo. >> RMWatcher.iss
+        echo [Tasks] >> RMWatcher.iss
+        echo Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked >> RMWatcher.iss
+        echo. >> RMWatcher.iss
+        echo [Files] >> RMWatcher.iss
+        echo Source: "publish\RMWatcher.exe"; DestDir: "{app}"; Flags: ignoreversion >> RMWatcher.iss
+        echo Source: "publish\D3DCompiler_47_cor3.dll"; DestDir: "{app}"; Flags: ignoreversion >> RMWatcher.iss
+        echo Source: "publish\PenImc_cor3.dll"; DestDir: "{app}"; Flags: ignoreversion >> RMWatcher.iss
+        echo Source: "publish\PresentationNative_cor3.dll"; DestDir: "{app}"; Flags: ignoreversion >> RMWatcher.iss
+        echo Source: "publish\vcruntime140_cor3.dll"; DestDir: "{app}"; Flags: ignoreversion >> RMWatcher.iss
+        echo Source: "publish\wpfgfx_cor3.dll"; DestDir: "{app}"; Flags: ignoreversion >> RMWatcher.iss
+        echo Source: "publish\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion >> RMWatcher.iss
+        echo Source: "publish\README.txt"; DestDir: "{app}"; Flags: ignoreversion >> RMWatcher.iss
+        echo Source: "publish\Appicon.ico"; DestDir: "{app}"; Flags: ignoreversion >> RMWatcher.iss
+        echo. >> RMWatcher.iss
+        echo [Icons] >> RMWatcher.iss
+        echo Name: "{group}\RMWatcher"; Filename: "{app}\RMWatcher.exe" >> RMWatcher.iss
+        echo Name: "{autodesktop}\RMWatcher"; Filename: "{app}\RMWatcher.exe"; Tasks: desktopicon >> RMWatcher.iss
+        echo. >> RMWatcher.iss
+        echo [Run] >> RMWatcher.iss
+        echo Filename: "{app}\RMWatcher.exe"; Description: "{cm:LaunchProgram,RMWatcher}"; Flags: nowait postinstall skipifsilent >> RMWatcher.iss
+
+    # ------------------------------------------------------------
+    # 10. Install Inno Setup (so we can build the installer EXE)
+    #     - Uses Chocolatey, a package manager for Windows
+    # ------------------------------------------------------------
+    - name: Install Inno Setup
+      run: choco install innosetup --no-progress
+
+    # ------------------------------------------------------------
+    # 11. Build the installer using Inno Setup (with our generated script)
+    #     - Output will be Output\RMWatcher_setup_x64_<version>.exe
+    # ------------------------------------------------------------
+    - name: Build Installer
+      run: iscc RMWatcher.iss
+
+    # ------------------------------------------------------------
+    # 12. Upload the installer to GitHub as a pre-release asset
+    #     - The release is labeled as a pre-release ("not stable") and users see a warning before downloading
+    #     - You can customize the release name/body if you like
+    # ------------------------------------------------------------
+    - name: Upload installer as release asset
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          Output/RMWatcher_setup_x64_${{ steps.extract_version.outputs.version }}.exe
+        prerelease: true   # THIS marks the release as a pre-release (so users see "not stable" label)
+        name: "Pre-release: ${{ github.ref_name }}"
+        body: |
+          🚧 **Pre-release / Nightly Build**
+          - This build is for testing, preview, or early access only.
+          - It may be unstable and is **not recommended for regular users**.
+          - The latest stable release can be found [here](https://github.com/<your-user>/<your-repo>/releases/latest)
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# ================================================================
+# How to use:
+#   - Push a tag like 'nightly-2024-05-25' or 'pre-0.3.0-alpha' to your repo
+#   - The workflow runs, builds, packages, and uploads the versioned installer to a pre-release on GitHub
+#   - Users will clearly see it's "Pre-release" and not "Latest"
+# ================================================================
