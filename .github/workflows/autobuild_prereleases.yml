@@ -34,7 +34,7 @@ jobs:
     - name: Set up .NET SDK
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x   # Use .NET 8 (change to your real target if needed)
+        dotnet-version: 9.0.204   # Use .NET 8 (change to your real target if needed)
 
     # ------------------------------------------------------------
     # 3. Download all your NuGet dependencies
@@ -57,7 +57,11 @@ jobs:
     # ------------------------------------------------------------
     - name: Publish self-contained app (Win-x64, single file)
       shell: pwsh
-      run: dotnet publish RMWatcher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish
+      run: dotnet publish RMWatcher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=false -o ./publish
+
+    - name: List published files
+      shell: pwsh
+      run: Get-ChildItem -Path ./publish | Select-Object Name, Length
 
     # ------------------------------------------------------------
     # 6. Copy LICENSE and Appicon.ico to the output folder
