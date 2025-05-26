@@ -100,15 +100,25 @@ jobs:
     # 8. Extract the version number from your tag
     #    - If your tag is 'nightly-2024-05-25', version becomes '2024-05-25'
     #    - If your tag is 'pre-0.3.0-alpha', version becomes '0.3.0-alpha'
+    #    - An '_experimental' suffix replaces '_setup' for clarity
     # ------------------------------------------------------------
-    - name: Extract version from tag
+    - name: Extract version and suffix for filename
       id: extract_version
+      shell: bash
       run: |
-        # Remove the known prefixes (nightly- or pre-) from the tag
         tag="${GITHUB_REF_NAME}"
-        version="${tag#nightly-}"
-        version="${version#pre-}"
+        if [[ "$tag" == nightly-* ]]; then
+          version="${tag#nightly-}"
+          suffix="_experimental"
+        elif [[ "$tag" == pre-* ]]; then
+          version="${tag#pre-}"
+          suffix="_setup"
+        else
+        version="$tag"
+        suffix="_setup"
+        fi
         echo "version=$version" >> $GITHUB_OUTPUT
+        echo "suffix=$suffix" >> $GITHUB_OUTPUT
 
     # ------------------------------------------------------------
     # 9. Create the Inno Setup installer script on the fly
@@ -136,7 +146,7 @@ jobs:
         echo InfoAfterFile=publish\README.txt >> RMWatcher.iss
         echo PrivilegesRequired=admin >> RMWatcher.iss
         echo OutputDir=Output >> RMWatcher.iss
-        echo OutputBaseFilename=RMWatcher_setup_x64_${{ steps.extract_version.outputs.version }} >> RMWatcher.iss
+        echo OutputBaseFilename=RMWatcher_${{ steps.extract_version.outputs.version }}${{ steps.extract_version.outputs.suffix }} >> RMWatcher.iss
         echo SetupIconFile=publish\Appicon.ico >> RMWatcher.iss
         echo SolidCompression=yes >> RMWatcher.iss
         echo WizardStyle=modern >> RMWatcher.iss
@@ -188,7 +198,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         files: |
-          Output/RMWatcher_setup_x64_${{ steps.extract_version.outputs.version }}.exe
+          Output/RMWatcher_${{ steps.extract_version.outputs.version }}${{ steps.extract_version.outputs.suffix }}.exe
         prerelease: true   # THIS marks the release as a pre-release (so users see "not stable" label)
         name: "Pre-release: ${{ github.ref_name }}"
         body: |
