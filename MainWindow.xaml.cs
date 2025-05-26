@@ -62,7 +62,7 @@ namespace RMWatcher
         private void SetupTrayIcon()
         {
             trayIcon = new NotifyIcon();
-            trayIcon.Icon = new System.Drawing.Icon("RMWatcher.ico");
+            trayIcon.Icon = new System.Drawing.Icon("Appicon.ico");
             trayIcon.Visible = true;
             trayIcon.Text = "RMWatcher";
 

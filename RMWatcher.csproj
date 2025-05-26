@@ -12,24 +12,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Appicon.ico" />
-    <None Remove="RMWatcher.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="RMWatcher.ico">
+    <Resource Include="Appicon.ico" />
+    <Content Include="Appicon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
   <ItemGroup>
-	<FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
-	<FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Resource Include="Appicon.ico" />
-  </ItemGroup>
-
 
 </Project>
