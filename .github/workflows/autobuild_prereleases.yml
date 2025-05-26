@@ -17,6 +17,10 @@ on:
       - 'pre-*'
   workflow_dispatch:   # (Optional) Allows you to trigger this manually from the GitHub UI if you ever need to
 
+permissions:
+  contents: write  # Needed for creating releases
+  packages: write  # Needed for artifacts/packages
+
 jobs:
   build:
     runs-on: windows-latest    # This tells GitHub to use the latest Windows runner VM (needed for WPF and Inno Setup)
