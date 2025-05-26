@@ -72,23 +72,26 @@ jobs:
     #      into a readable ASCII text file (removes formatting, headers get lines, etc.)
     # ------------------------------------------------------------
     - name: Generate markdown-to-ASCII README converter
+      shell: bash
       run: |
-        echo import re > convert_readme.py
-        echo. >> convert_readme.py
-        echo def md_to_ascii(txt): >> convert_readme.py
-        echo.    txt = re.sub(r'^# (.+)$', lambda m: f"\n{'='*len(m.group(1))}\n{m.group(1).upper()}\n{'='*len(m.group(1))}\n", txt, flags=re.MULTILINE) >> convert_readme.py
-        echo.    txt = re.sub(r'^## (.+)$', lambda m: f"\n{m.group(1)}\n{'-'*len(m.group(1))}\n", txt, flags=re.MULTILINE) >> convert_readme.py
-        echo.    txt = re.sub(r'^[-*] ', '• ', txt, flags=re.MULTILINE) >> convert_readme.py
-        echo.    txt = txt.replace('```', '') >> convert_readme.py
-        echo.    txt = re.sub(r'[*_]{1,2}', '', txt) >> convert_readme.py
-        echo.    txt = re.sub(r'\n{3,}', '\n\n', txt) >> convert_readme.py
-        echo.    return txt.strip() >> convert_readme.py
-        echo. >> convert_readme.py
-        echo with open("README.md", "r", encoding="utf-8") as f: >> convert_readme.py
-        echo.    md = f.read() >> convert_readme.py
-        echo out = md_to_ascii(md) >> convert_readme.py
-        echo with open("publish/README.txt", "w", encoding="utf-8") as f: >> convert_readme.py
-        echo.    f.write(out) >> convert_readme.py
+          cat <<'EOF' > convert_readme.py
+          import re
+
+          def md_to_ascii(txt):
+              txt = re.sub(r'^# (.+)$', lambda m: f"\n{'='*len(m.group(1))}\n{m.group(1).upper()}\n{'='*len(m.group(1))}\n", txt, flags=re.MULTILINE)
+              txt = re.sub(r'^## (.+)$', lambda m: f"\n{m.group(1)}\n{'-'*len(m.group(1))}\n", txt, flags=re.MULTILINE)
+              txt = re.sub(r'^[-*] ', '• ', txt, flags=re.MULTILINE)
+              txt = txt.replace('```', '')
+              txt = re.sub(r'[*_]{1,2}', '', txt)
+              txt = re.sub(r'\n{3,}', '\n\n', txt)
+              return txt.strip()
+  
+          with open("README.md", "r", encoding="utf-8") as f:
+              md = f.read()
+          out = md_to_ascii(md)
+          with open("publish/README.txt", "w", encoding="utf-8") as f:
+              f.write(out)
+          EOF
 
     - name: Generate README.txt
       run: python convert_readme.py
