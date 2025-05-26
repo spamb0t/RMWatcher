@@ -54,7 +54,7 @@ jobs:
     #    - Output goes into the 'publish' folder
     # ------------------------------------------------------------
     - name: Publish self-contained app (Win-x64, single file)
-      run: dotnet publish RMWatcher/RMWatcher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish
+      run: dotnet publish RMWatcher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish
 
     # ------------------------------------------------------------
     # 6. Copy LICENSE and Appicon.ico to the output folder
