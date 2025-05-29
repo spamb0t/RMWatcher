@@ -276,7 +276,7 @@ namespace RMWatcher
 
         private void ShowSettings()
         {
-            var dlg = new SettingsDialog(preferredLinkType, pollIntervalMin, autoRun, closeToTray)
+            var dlg = new SettingsDialog(preferredLinkType, pollIntervalMin, autoRun, closeToTray, alwaysStartMinimized)
             {
                 Owner = this
             };
