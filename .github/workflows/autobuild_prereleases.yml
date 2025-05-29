@@ -232,7 +232,7 @@ jobs:
           🚧 **Pre-release / Nightly Build**
           - This build is for testing, preview, or early access only.
           - It may be unstable and is **not recommended for regular users**.
-          - The latest stable release can be found [here](https://github.com/spamb0t>/RMWatcher/releases/latest)
+          - The latest stable release can be found [here](https://github.com/spamb0t/RMWatcher/releases/latest)
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
