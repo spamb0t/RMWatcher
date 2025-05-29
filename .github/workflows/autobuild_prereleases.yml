@@ -49,28 +49,23 @@ jobs:
 
     # ------------------------------------------------------------
     # 4. Copy files temporarily needed for the build and publish steps
-    #    - Creates folder and creates a temporary copy of Appicon.ico
     #    - Makes Win32/WPF icon available at build
     #    - Ensures a DRY environment
     # ------------------------------------------------------------
 
-    - name: Ensure publish folder exists
-      shell: pwsh
-      run: New-Item -ItemType Directory -Force -Path publish
-
     - name: Copy Appicon.ico for WPF resource (as Appicon_wpf.ico)
       shell: pwsh
-      run: Copy-Item Appicon.ico publish\Appicon_wpf.ico -Force
+      run: Copy-Item Appicon.ico Appicon_wpf.ico -Force
 
     # ------------------------------------------------------------
-    # 5. Build the app in Release mode (faster, optimized, ready for publishing)
+    # X. Build the app in Release mode (optional, mostly for debug)
     # ------------------------------------------------------------
-    - name: Build in Release mode
-      shell: pwsh
-      run: dotnet build RMWatcher.sln --configuration Release --no-restore
+    #- name: Build in Release mode
+    #  shell: pwsh
+    #  run: dotnet build RMWatcher.sln --configuration Release --no-restore
 
     # ------------------------------------------------------------
-    # 6. Publish your app as a single-file, self-contained Win-x64 EXE
+    # 5. Publish your app as a single-file, self-contained Win-x64 EXE
     #    - This makes sure end-users don't need .NET installed
     #    - Output goes into the 'publish' folder
     #    - Lists all published files to ensure a complete yet DRY environment
@@ -84,7 +79,7 @@ jobs:
       run: Get-ChildItem -Path ./publish | Select-Object Name, Length
 
     # ------------------------------------------------------------
-    # 7. Copy files needed for the Inno Installer
+    # 6. Copy files needed for the Inno Installer
     #    - Files only needed for the installer
     #    - Files needed for build or publish is copied in Step 4
     # ------------------------------------------------------------
@@ -93,7 +88,7 @@ jobs:
       run: Copy-Item LICENSE publish\LICENSE.txt -Force
 
     # ------------------------------------------------------------
-    # 8. Convert README.md to README.txt for the installer
+    # 7. Convert README.md to README.txt for the installer
     #    - This creates a temporary Python script that turns your markdown README
     #      into a readable ASCII text file (removes formatting, headers get lines, etc.)
     # ------------------------------------------------------------
@@ -126,7 +121,7 @@ jobs:
       run: python convert_readme.py
 
     # ------------------------------------------------------------
-    # 9. Extract the version number from your tag
+    # 8. Extract the version number from your tag
     #    - If your tag is 'nightly-2024-05-25', version becomes '2024-05-25'
     #    - If your tag is 'pre-0.3.0-alpha', version becomes '0.3.0-alpha'
     #    - An '_experimental' suffix replaces '_setup' for clarity
