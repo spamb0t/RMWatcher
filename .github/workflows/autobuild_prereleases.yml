@@ -75,6 +75,10 @@ jobs:
       shell: pwsh
       run: Copy-Item LICENSE publish\LICENSE.txt -Force
 
+    - name: Copy Appicon.ico for WPF resource (as Appicon_wpf.ico)
+      shell: pwsh
+      run: Copy-Item Appicon.ico publish\Appicon_wpf.ico -Force
+    
     - name: Copy single Appicon.ico to build dir
       shell: pwsh
       run: Copy-Item Appicon.ico publish\Appicon.ico -Force
@@ -91,12 +95,14 @@ jobs:
           import re
 
           def md_to_ascii(txt):
-              txt = re.sub(r'^# (.+)$', lambda m: f"\n{'='*len(m.group(1))}\n{m.group(1).upper()}\n{'='*len(m.group(1))}\n", txt, flags=re.MULTILINE)
-              txt = re.sub(r'^## (.+)$', lambda m: f"\n{m.group(1)}\n{'-'*len(m.group(1))}\n", txt, flags=re.MULTILINE)
-              txt = re.sub(r'^[-*] ', '• ', txt, flags=re.MULTILINE)
-              txt = txt.replace('```', '')
-              txt = re.sub(r'[*_]{1,2}', '', txt)
-              txt = re.sub(r'\n{3,}', '\n\n', txt)
+              txt = re.sub(r'^# (.+)$', lambda m: f"\n{'='*len(m.group(1))}\n{m.group(1).upper()}\n{'='*len(m.group(1))}\n", txt, flags=re.MULTILINE)     # Converts top-level Markdown headings to all-caps headers, underlined and overlined with '='.
+              txt = re.sub(r'^## (.+)$', lambda m: f"\n{m.group(1)}\n{'-'*len(m.group(1))}\n", txt, flags=re.MULTILINE)     # Converts secondary Markdown headings to plain text underlined with '-'.
+              txt = re.sub(r'^[-*] ', '• ', txt, flags=re.MULTILINE)     # Replaces Markdown bullet list markers (- or *) at line start with a Unicode bullet '•'.
+              txt = re.sub(r'<[^>]+>', '', txt)     # Removes all HTML-style tags
+              txt = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'\1', txt)    # Replaces Markdown links [label](url) with just the label.
+              txt = txt.replace('```', '')     # Removes Markdown code block markers (triple backticks)
+              txt = re.sub(r'[*_]{1,2}', '', txt)    # Removes all bold/italic markers (*, **, _, __)
+              txt = re.sub(r'\n{3,}', '\n\n', txt)    # Replaces three or more consecutive newlines with just two, reducing large blank spaces
               return txt.strip()
   
           with open("README.md", "r", encoding="utf-8") as f:
@@ -222,7 +228,7 @@ jobs:
           🚧 **Pre-release / Nightly Build**
           - This build is for testing, preview, or early access only.
           - It may be unstable and is **not recommended for regular users**.
-          - The latest stable release can be found [here](https://github.com/<your-user>/<your-repo>/releases/latest)
+          - The latest stable release can be found [here](https://github.com/spamb0t>/RMWatcher/releases/latest)
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
