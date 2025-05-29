@@ -10,7 +10,7 @@ namespace RMWatcher
         public bool CloseToTray { get; set; }
         public bool AlwaysStartMinimized { get; set; }
 
-        public SettingsDialog(string preferredType, int interval, bool autoRun, bool closeToTray)
+        public SettingsDialog(string preferredType, int interval, bool autoRun, bool closeToTray, bool alwaysStartMinimized)
         {
             InitializeComponent();
 
