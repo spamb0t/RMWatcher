@@ -48,6 +48,7 @@
                 <StackPanel>
                     <CheckBox x:Name="AutoRunBox" Content="Auto-run at startup" FontSize="12" Margin="0,2,0,2"/>
                     <CheckBox x:Name="CloseTrayBox" Content="Minimize to tray on close" FontSize="12" Margin="0,2,0,2"/>
+                    <CheckBox x:Name="AlwaysMinBox" Content="Always launch minimized" FontSize="12" Margin="0,2,0,2"/>
                 </StackPanel>
             </Border>
 

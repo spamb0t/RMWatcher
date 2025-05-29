@@ -8,6 +8,7 @@ namespace RMWatcher
         public int PollingIntervalMinutes { get; set; }
         public bool AutoRun { get; set; }
         public bool CloseToTray { get; set; }
+        public bool AlwaysStartMinimized { get; set; }
 
         public SettingsDialog(string preferredType, int interval, bool autoRun, bool closeToTray)
         {
@@ -22,6 +23,7 @@ namespace RMWatcher
             IntervalBox.Text = interval.ToString();
             AutoRunBox.IsChecked = autoRun;
             CloseTrayBox.IsChecked = closeToTray;
+            AlwaysMinBox.IsChecked = alwaysStartMinimized; // New!
         }
 
         private void OK_Click(object sender, RoutedEventArgs e)
@@ -48,6 +50,7 @@ namespace RMWatcher
             PollingIntervalMinutes = interval;
             AutoRun = AutoRunBox.IsChecked == true;
             CloseToTray = CloseTrayBox.IsChecked == true;
+            AlwaysStartMinimized = AlwaysMinBox.IsChecked == true;
             this.DialogResult = true;
         }
 

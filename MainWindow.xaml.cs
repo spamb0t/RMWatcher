@@ -20,6 +20,7 @@ namespace RMWatcher
         private int pollIntervalMin = 60; // Default polling interval
         private bool autoRun = false;
         private bool closeToTray = false;
+        private bool alwaysStartMinimized = false;
         private const string AppName = "RMWatcher";
         private static string SettingsFile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RMWatcher", "settings.json");
 
@@ -47,18 +48,23 @@ namespace RMWatcher
             // Tray icon setup
             SetupTrayIcon();
 
-            // Parse command-line args for minimized start
-            var args = Environment.GetCommandLineArgs();
-            if (args.Length > 1 && args.Contains("--minimized"))
+            if (App.LaunchMinimized || alwaysStartMinimized)
             {
-                Hide();
+                this.Hide();
             }
 
+            this.StateChanged += MainWindow_StateChanged;
             Log("Welcome! Add up to 5 Reddit post URLs to monitor for magnet or .torrent links.");
         }
 
-        #region Tray/Minimize Logic
+        #region Tray/Minimize/Close Logic
 
+        // Flag to ensure tray balloon tip only appears once per session
+        private bool trayTipShownThisSession = false;
+
+        /// <summary>
+        /// Sets up the tray icon and associated menu actions.
+        /// </summary>
         private void SetupTrayIcon()
         {
             trayIcon = new NotifyIcon();
@@ -66,23 +72,56 @@ namespace RMWatcher
             trayIcon.Visible = true;
             trayIcon.Text = "RMWatcher";
 
-            // Context menu
+            // Context menu for the tray icon
             var menu = new ContextMenuStrip();
-            menu.Items.Add("Show", null, (s, e) => ShowFromTray());
+            menu.Items.Add("Show", null, (s, e) => RestoreFromTray());
             menu.Items.Add("Settings", null, (s, e) => ShowSettings());
             menu.Items.Add("Exit", null, (s, e) => ExitApp());
             trayIcon.ContextMenuStrip = menu;
 
-            trayIcon.DoubleClick += (s, e) => ShowFromTray();
+            // Double-click tray icon restores window
+            trayIcon.DoubleClick += (s, e) => RestoreFromTray();
         }
 
-        private void ShowFromTray()
+        /// <summary>
+        /// Unified method for hiding the window and showing tray notification.
+        /// Used for both minimize and "close to tray".
+        /// Only shows balloon tip once per session.
+        /// </summary>
+        /// <param name="fromClose">True if hiding due to close event, false if due to minimize.</param>
+        private void HideToTray(bool fromClose)
+        {
+            this.Hide(); // Removes from taskbar and hides window
+
+            // Show a balloon tip the first time only, to avoid spamming user
+            if (!trayTipShownThisSession)
+            {
+                trayIcon.BalloonTipTitle = "RMWatcher";
+                trayIcon.BalloonTipText = fromClose
+                    ? "App is still running in the system tray (closed to tray)."
+                    : "App is still running in the system tray (minimized).";
+                trayIcon.ShowBalloonTip(1000);
+                trayTipShownThisSession = true;
+            }
+
+            LogUI(fromClose
+                ? "App closed to tray."
+                : "App minimized to tray.");
+        }
+
+        /// <summary>
+        /// Restores the main window from the tray.
+        /// </summary>
+        private void RestoreFromTray()
         {
             this.Show();
             this.WindowState = WindowState.Normal;
             this.Activate();
         }
 
+        /// <summary>
+        /// Exits the application completely, disposing the tray icon.
+        /// </summary>
         private void ExitApp()
         {
             trulyClosing = true;
@@ -91,23 +130,42 @@ namespace RMWatcher
             System.Windows.Application.Current.Shutdown();
         }
 
+        /// <summary>
+        /// Handles minimize-to-tray logic: hides window and shows tray icon when minimized.
+        /// </summary>
+        private void MainWindow_StateChanged(object sender, EventArgs e)
+        {
+            // Minimize always goes to tray, regardless of "close to tray" setting
+            if (this.WindowState == WindowState.Minimized)
+            {
+                HideToTray(fromClose: false); // Not triggered by close
+            }
+        }
+
+        /// <summary>
+        /// Handles "close to tray" logic: if enabled, hides window instead of exiting.
+        /// </summary>
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
             if (!trulyClosing && closeToTray)
             {
-                e.Cancel = true;
-                this.Hide();
-                LogUI("App minimized to tray.");
+                e.Cancel = true;           // Cancel the actual close event
+                HideToTray(fromClose: true); // Hide window, notify user
             }
             else
             {
-                trayIcon.Visible = false;
+                trayIcon.Visible = false;  // Fully exit, remove tray icon
                 trayIcon.Dispose();
                 base.OnClosing(e);
             }
         }
 
         #endregion
+
+
+        // Add this line to the MainWindow constructor (after SetupTrayIcon):
+        // this.StateChanged += MainWindow_StateChanged;
+
 
         #region UI Event Handlers
 
@@ -228,6 +286,7 @@ namespace RMWatcher
                 pollIntervalMin = dlg.PollingIntervalMinutes;
                 autoRun = dlg.AutoRun;
                 closeToTray = dlg.CloseToTray;
+                alwaysStartMinimized = dlg.AlwaysStartMinimized; // New!
                 SaveSettings();
 
                 if (autoRun)
@@ -235,7 +294,7 @@ namespace RMWatcher
                 else
                     DisableAutoRun();
 
-                LogUI($"Settings updated: Link type = {preferredLinkType}, Interval = {pollIntervalMin} min, Auto-run = {autoRun}, Close to tray = {closeToTray}");
+                LogUI($"Settings updated: Link type = {preferredLinkType}, Interval = {pollIntervalMin} min, Auto-run = {autoRun}, Close to tray = {closeToTray}, Always start minimized = {alwaysStartMinimized}");
             }
         }
 
@@ -246,7 +305,9 @@ namespace RMWatcher
             public int PollIntervalMin { get; set; }
             public bool AutoRun { get; set; }
             public bool CloseToTray { get; set; }
+            public bool AlwaysStartMinimized { get; set; } // New!
         }
+
 
         private void SaveSettings()
         {
@@ -255,12 +316,13 @@ namespace RMWatcher
                 PreferredLinkType = preferredLinkType,
                 PollIntervalMin = pollIntervalMin,
                 AutoRun = autoRun,
-                CloseToTray = closeToTray
+                CloseToTray = closeToTray,
+                AlwaysStartMinimized = alwaysStartMinimized // New!
             };
-            //Ensure the directory for the settings file exists
             Directory.CreateDirectory(Path.GetDirectoryName(SettingsFile));
             File.WriteAllText(SettingsFile, JsonSerializer.Serialize(data));
         }
+
 
         private void LoadSettings()
         {
@@ -274,6 +336,7 @@ namespace RMWatcher
                     pollIntervalMin = Math.Max(data.PollIntervalMin, 60);
                     autoRun = data.AutoRun;
                     closeToTray = data.CloseToTray;
+                    alwaysStartMinimized = data.AlwaysStartMinimized; // New!
                 }
                 catch
                 {
