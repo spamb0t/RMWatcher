@@ -49,9 +49,14 @@ jobs:
 
     # ------------------------------------------------------------
     # 4. Copy files temporarily needed for the build and publish steps
-    #    - So Win32/WPF icon available at build
+    #    - Creates folder and creates a temporary copy of Appicon.ico
+    #    - Makes Win32/WPF icon available at build
     #    - Ensures a DRY environment
     # ------------------------------------------------------------
+
+    - name: Ensure publish folder exists
+      shell: pwsh
+      run: New-Item -ItemType Directory -Force -Path publish
 
     - name: Copy Appicon.ico for WPF resource (as Appicon_wpf.ico)
       shell: pwsh
