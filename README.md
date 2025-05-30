@@ -48,8 +48,8 @@
 
 ## Version History
 
-- **0.2.5-alpha** (Pre-release)
-	- Backend: Overhauled and streamlined project management and structure, making updates easier and faster. No feature updates.
+- **0.2.5-a.8**
+	- Rewrites to workflow and updated, better, DRY code. Fixed "Minimize to Tray" behaviour, added option for "Always launch minimized".
 
 - **0.2.1-alpha**
 	- Fixed crash on startup due to WPF Window / Tray icon conflict
