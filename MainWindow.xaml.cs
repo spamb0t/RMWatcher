@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Threading;
+using System.Windows.Controls; // For ListBoxItem
 using System.Windows.Forms; // For NotifyIcon
 using System.Drawing;       // For Icon
 using Microsoft.Win32;
