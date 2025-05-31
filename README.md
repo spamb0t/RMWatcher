@@ -48,14 +48,13 @@
 
 ## Version History
 
-<<<<<<< HEAD
-- **0.2.5-a.8**
-	- Rewrites to workflow and updated, better, DRY code. Fixed "Minimize to Tray" behaviour, added option for "Always launch minimized".
-=======
-- **0.2.5-a.11** (Pre-release)
+- **0.2.5-a.11**
   - URLs and their content saved (using a hash) between sessions.
-  - Fixes to code to work well with code, making updates easier and faster.
->>>>>>> workflow
+  - Fixes to code to streamline workflow, making updates easier and faster.
+
+- **0.2.5-a.8**
+  - Rewrites to workflow and updated, better, DRY code.
+  - Fixed "Minimize to Tray" behavior, added option for "Always launch minimized".
 
 - **0.2.1-alpha**
 	- Fixed crash on startup due to WPF Window / Tray icon conflict
