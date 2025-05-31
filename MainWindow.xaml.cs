@@ -28,9 +28,7 @@ namespace RMWatcher
 
         // == MONITORING STATE ==
         private const int MaxUrls = 5;
-        private List<string> monitoredUrls = new List<string>();
-        private Dictionary<string, string> lastContents = new Dictionary<string, string>();
-        private Dictionary<string, string> lastFoundLinks = new Dictionary<string, string>();
+        private List<MonitoredUrl> monitoredUrls = new List<MonitoredUrl>();
         private bool isMonitoring = false;
         private readonly HttpClient http = new HttpClient();
 
@@ -38,12 +36,32 @@ namespace RMWatcher
         private NotifyIcon trayIcon;
         private bool trulyClosing = false;
 
-        public MainWindow()
+        /// <summary>
+        /// Represents a monitored URL and its last known content hash.
+        /// You can expand this with per-URL settings later.
+        /// </summary>
+        public class MonitoredUrl
+        {
+            public string Url { get; set; }
+            public string LastContentHash { get; set; } = "";
+            // Future-proof: add interval, label, group, etc. here
+        }
+            public MainWindow()
         {
             InitializeComponent();
 
             // Load settings
             LoadSettings();
+            UrlList.Items.Clear();
+            foreach (var entry in monitoredUrls)
+            {
+                var item = new System.Windows.Controls.ListBoxItem
+                {
+                    Content = entry.Url,
+                    ToolTip = entry.Url
+                };
+                UrlList.Items.Add(item);
+            }
 
             // Tray icon setup
             SetupTrayIcon();
@@ -183,7 +201,7 @@ namespace RMWatcher
                 Log($"You can only monitor up to {MaxUrls} URLs.");
                 return;
             }
-            if (monitoredUrls.Contains(url))
+            if (monitoredUrls.Any(x => x.Url == url))
             {
                 Log("This URL is already being monitored.");
                 return;
@@ -220,7 +238,8 @@ namespace RMWatcher
                 Log($"Could not fetch post title: {ex.Message}");
             }
 
-            monitoredUrls.Add(url);
+            monitoredUrls.Add(new MonitoredUrl { Url = url, LastContentHash = "" });
+            SaveSettings();
 
             // --- Add ListBoxItem with title as Content, URL as ToolTip ---
             var item = new System.Windows.Controls.ListBoxItem
@@ -234,12 +253,35 @@ namespace RMWatcher
             Log($"Added: {title}");
         }
 
+        // === Future feature: Remove a single URL from monitoring ===
+        // This method will remove the first matching URL from monitoredUrls, update the settings, and refresh the UI.
+        // To use: uncomment, then call from your "Remove" button handler (when you add one).
+        /*
+        private void RemoveUrl(string urlToRemove)
+        {
+            var toRemove = monitoredUrls.FirstOrDefault(x => x.Url == urlToRemove);
+            if (toRemove != null)
+            {
+                monitoredUrls.Remove(toRemove);
+                SaveSettings();
+
+                // Refresh the UI ListBox (removes only the deleted entry)
+                foreach (var item in UrlList.Items.OfType<ListBoxItem>().ToList())
+                {
+                    if ((string)item.Content == urlToRemove)
+                        UrlList.Items.Remove(item);
+                }
+
+                Log($"Removed URL: {urlToRemove}");
+            }
+        }
+        */
+
         private void ClearBtn_Click(object sender, RoutedEventArgs e)
         {
             monitoredUrls.Clear();
             UrlList.Items.Clear();
-            lastContents.Clear();
-            lastFoundLinks.Clear();
+            SaveSettings();
             Log("Cleared all URLs and reset state.");
         }
 
@@ -298,14 +340,14 @@ namespace RMWatcher
             }
         }
 
-        // All four settings now included!
         private class SettingsData
         {
             public string PreferredLinkType { get; set; }
             public int PollIntervalMin { get; set; }
             public bool AutoRun { get; set; }
             public bool CloseToTray { get; set; }
-            public bool AlwaysStartMinimized { get; set; } // New!
+            public bool AlwaysStartMinimized { get; set; }
+            public List<MonitoredUrl> MonitoredUrls { get; set; } = new List<MonitoredUrl>(); // Saves all monitored URL in the user settings
         }
 
 
@@ -317,10 +359,20 @@ namespace RMWatcher
                 PollIntervalMin = pollIntervalMin,
                 AutoRun = autoRun,
                 CloseToTray = closeToTray,
-                AlwaysStartMinimized = alwaysStartMinimized // New!
+                AlwaysStartMinimized = alwaysStartMinimized,
+                MonitoredUrls = monitoredUrls
             };
-            Directory.CreateDirectory(Path.GetDirectoryName(SettingsFile));
-            File.WriteAllText(SettingsFile, JsonSerializer.Serialize(data));
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(SettingsFile));
+                File.WriteAllText(SettingsFile, JsonSerializer.Serialize(data));
+            }
+            catch (Exception ex)
+            {
+                LogUI($"Failed to save settings: {ex.GetType().Name}: {ex.Message}");
+                // Show a one-time error message popup
+                Dispatcher.Invoke(() => System.Windows.MessageBox.Show("Settings could not be saved. See log for details.", "RMWatcher - Error", MessageBoxButton.OK, MessageBoxImage.Warning));
+            }
         }
 
 
@@ -336,16 +388,23 @@ namespace RMWatcher
                     pollIntervalMin = Math.Max(data.PollIntervalMin, 60);
                     autoRun = data.AutoRun;
                     closeToTray = data.CloseToTray;
-                    alwaysStartMinimized = data.AlwaysStartMinimized; // New!
+                    alwaysStartMinimized = data.AlwaysStartMinimized;
+                    monitoredUrls = data.MonitoredUrls ?? new List<MonitoredUrl>();
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Defaults in case of settings file corruption
+                    LogUI("Settings file is missing or corrupted. Loading defaults.");
+                    LogUI($"Settings error: {ex.GetType().Name}: {ex.Message}");
+                    // Show a one-time error message popup
+                    Dispatcher.Invoke(() => System.Windows.MessageBox.Show("Settings file could not be read and defaults were loaded. See log for details.", "RMWatcher - Error", MessageBoxButton.OK, MessageBoxImage.Warning));
                     preferredLinkType = "magnet";
                     pollIntervalMin = 60;
                     autoRun = false;
                     closeToTray = false;
+                    alwaysStartMinimized = false;
+                    monitoredUrls = new List<MonitoredUrl>();
                 }
+
             }
             else
             {
@@ -354,6 +413,8 @@ namespace RMWatcher
                 pollIntervalMin = 60;
                 autoRun = false;
                 closeToTray = false;
+                alwaysStartMinimized = false;
+                monitoredUrls = new List<MonitoredUrl>();
             }
         }
 
@@ -390,18 +451,28 @@ namespace RMWatcher
                 && !url.EndsWith("/comments/");
         }
 
+        /// <summary>
+        /// Starts the main monitoring loop. For each monitored URL, fetches content,
+        /// computes a hash for change detection, and launches new links if found.
+        /// Persists URL hashes after each scan.
+        /// </summary>
         private async void StartMonitoringLoop()
         {
             await System.Threading.Tasks.Task.Run(async () =>
             {
                 while (isMonitoring)
                 {
-                    foreach (var url in monitoredUrls)
+                    bool settingsChanged = false; // Track if we need to save settings
+                    
+                    foreach (var entry in monitoredUrls) // Loop over each monitored URL object
                     {
+                        string url = entry.Url; // Use the stored URL
+
                         try
                         {
                             string jsonUrl = url.TrimEnd('/') + "/.json";
                             http.DefaultRequestHeaders.UserAgent.ParseAdd("RMWatcher/0.2 (by spamb0t)");
+
                             var resp = await http.GetAsync(jsonUrl);
                             if (!resp.IsSuccessStatusCode)
                             {
@@ -409,16 +480,17 @@ namespace RMWatcher
                                 continue;
                             }
                             var text = await resp.Content.ReadAsStringAsync();
+
                             using var doc = JsonDocument.Parse(text);
                             var root = doc.RootElement;
                             string selftext = "";
                             try
                             {
                                 selftext = root[0].GetProperty("data")
-                                                  .GetProperty("children")[0]
-                                                  .GetProperty("data")
-                                                  .GetProperty("selftext")
-                                                  .GetString() ?? "";
+                                                .GetProperty("children")[0]
+                                                .GetProperty("data")
+                                                .GetProperty("selftext")
+                                                .GetString() ?? "";
                             }
                             catch
                             {
@@ -426,10 +498,13 @@ namespace RMWatcher
                                 continue;
                             }
 
-                            if (!lastContents.TryGetValue(url, out var prevContent) || selftext != prevContent)
+                            // --- NEW: Hash-based change detection ---
+                            string currentHash = ComputeHash(selftext); // Compute the current content hash
+
+                            if (entry.LastContentHash != currentHash)
                             {
                                 LogUI($"[{url}] Post updated, scanning for links...");
-                                lastContents[url] = selftext;
+                                entry.LastContentHash = currentHash; // Save the new hash
 
                                 string foundLink = null;
                                 if (preferredLinkType == "magnet")
@@ -441,37 +516,38 @@ namespace RMWatcher
                                     foundLink = ExtractTorrentLink(selftext) ?? ExtractMagnetLink(selftext);
                                 }
 
-                                if (foundLink != null)
+                                if (!string.IsNullOrEmpty(foundLink))
                                 {
-                                    if (!lastFoundLinks.TryGetValue(url, out var lastLink) || foundLink != lastLink)
-                                    {
-                                        LogUI($"[{url}] New link found: {foundLink}");
-                                        lastFoundLinks[url] = foundLink;
+                                    LogUI($"[{url}] New link found: {foundLink}");
 
-                                        try
-                                        {
-                                            // Open with system default app
-                                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                                            {
-                                                FileName = foundLink,
-                                                UseShellExecute = true
-                                            });
-                                            LogUI($"Launched link via system.");
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            LogUI($"Failed to launch link: {ex.Message}");
-                                        }
-                                    }
-                                    else
+                                    try
                                     {
-                                        LogUI($"[{url}] Link unchanged.");
+                                        // Open with system default app
+                                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                                        {
+                                            FileName = foundLink,
+                                            UseShellExecute = true
+                                        });
+                                        LogUI($"Launched link via system.");
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        LogUI($"Failed to launch link: {ex.Message}");
                                     }
                                 }
                                 else
                                 {
                                     LogUI($"[{url}] No matching link found in post.");
                                 }
+
+                                // Persist the updated hash after each change
+                                settingsChanged = true;
+                            }
+                            else
+                            {
+                                // No change detected; do nothing
+                                // Optionally, you can log if desired:
+                                // LogUI($"[{url}] No content change detected.");
                             }
                         }
                         catch (Exception ex)
@@ -479,12 +555,19 @@ namespace RMWatcher
                             LogUI($"Error polling {url}: {ex.Message}");
                         }
                     }
-                    // Wait for the user-set interval (in minutes)
-                    for (int i = 0; i < pollIntervalMin * 60; i++)
+
+                    if (settingsChanged)
                     {
-                        if (!isMonitoring) break;
-                        await System.Threading.Tasks.Task.Delay(1000);
+                        SaveSettings(); // Save settings if any URL hash changed
+                        LogUI("Settings saved after content change detection.");
                     }
+
+                    // Wait for the user-set interval (in minutes), but allow early stop
+                        for (int i = 0; i < pollIntervalMin * 60; i++)
+                        {
+                            if (!isMonitoring) break;
+                            await System.Threading.Tasks.Task.Delay(1000);
+                        }
                 }
             });
         }
@@ -501,7 +584,18 @@ namespace RMWatcher
             var m = Regex.Match(selftext, @"https?://\S+\.torrent");
             return m.Success ? m.Value : null;
         }
-
+        /// <summary>
+        /// Computes a SHA256 hash for change detection.
+        /// </summary>
+        public static string ComputeHash(string content)
+        {
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            {
+                var bytes = System.Text.Encoding.UTF8.GetBytes(content ?? "");
+                var hashBytes = sha256.ComputeHash(bytes);
+                return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+            }
+        }
         #endregion
 
         #region Logging
