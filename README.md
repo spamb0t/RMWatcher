@@ -48,7 +48,7 @@
 
 ## Version History
 
-- **0.2.5-a.9** (Pre-release)
+- **0.2.5-a.11** (Pre-release)
   - URLs and their content saved (using a hash) between sessions.
   - Fixes to code to work well with code, making updates easier and faster.
 
