@@ -46,7 +46,7 @@ namespace RMWatcher
             public string LastContentHash { get; set; } = "";
             // Future-proof: add interval, label, group, etc. here
         }
-            public MainWindow()
+        public MainWindow()
         {
             InitializeComponent();
 
@@ -62,6 +62,7 @@ namespace RMWatcher
                 };
                 UrlList.Items.Add(item);
             }
+            UrlList.SelectionChanged += UrlList_SelectionChanged;
 
             // Tray icon setup
             SetupTrayIcon();
@@ -284,6 +285,39 @@ namespace RMWatcher
             SaveSettings();
             Log("Cleared all URLs and reset state.");
         }
+        
+        private void UrlList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ClearSelectedBtn.IsEnabled = UrlList.SelectedItems.Count > 0;
+        }
+        private void ClearSelectedBtn_Click(object sender, RoutedEventArgs e)
+        {
+            // Make a copy to avoid collection modification issues
+            var itemsToRemove = UrlList.SelectedItems.Cast<System.Windows.Controls.ListBoxItem>().ToList();
+            if (itemsToRemove.Count == 0)
+                return;
+
+            int removedCount = 0;
+
+            foreach (var item in itemsToRemove)
+            {
+                string urlToRemove = item.ToolTip as string;
+                var found = monitoredUrls.FirstOrDefault(x => x.Url == urlToRemove);
+                if (found != null)
+                {
+                    monitoredUrls.Remove(found);
+                    removedCount++;
+                }
+                UrlList.Items.Remove(item);
+            }
+
+            if (removedCount > 0)
+            {
+                SaveSettings();
+                LogUI($"Cleared {removedCount} URL{(removedCount > 1 ? "s" : "")} from monitoring.");
+            }
+        }
+
 
         private void StartBtn_Click(object sender, RoutedEventArgs e)
         {
