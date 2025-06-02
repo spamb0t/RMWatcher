@@ -8,11 +8,11 @@
 
 ### How It Works
 
-**RMWatcher** is a tool for tracking posts that are updated over time (such as megathreads or ongoing event posts), letting you automate downloads without constant manual refreshing.
+**RMWatcher** is a tool for monitoring Reddit posts with torrent links that gets updated over time (such as megathreads or ongoing event posts), letting you automate downloads without constant manual refreshing.
 
 - **Current Focus:**  
   **RMWatcher** only scans the *main body* of the specified post for changes or new links. It does not scan comments, subreddit feeds, or user pages.  
-  (Monitoring comments is *intentionally* excluded for now, as anyone can post in the comments — including potentially unsafe links. This keeps things secure and predictable.)
+  (Monitoring comments is *intentionally* excluded for now, as anyone can post anything in the comments — including potentially unsafe links. This keeps things secure and predictable.)
 
 - **Continuous Development:**  
   The app is in active development, with new features and expanded capabilities being added regularly.  
@@ -67,9 +67,13 @@
 
 ## Version History
 
-- **0.2.5-a.11** (Pre-release)
+- **0.2.5-a.11**
   - URLs and their content saved (using a hash) between sessions.
-  - Fixes to code to work well with code, making updates easier and faster.
+  - Fixes to code to streamline workflow, making updates easier and faster.
+
+- **0.2.5-a.8**
+  - Rewrites to workflow and updated, better, DRY code.
+  - Fixed "Minimize to Tray" behavior, added option for "Always launch minimized".
 
 - **0.2.1-alpha**
 	- Fixed crash on startup due to WPF Window / Tray icon conflict
