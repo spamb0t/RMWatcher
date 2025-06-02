@@ -8,11 +8,11 @@
 
 ### How It Works
 
-**RMWatcher** is a tool for tracking posts that are updated over time (such as megathreads or ongoing event posts), letting you automate downloads without constant manual refreshing.
+**RMWatcher** is a tool for monitoring Reddit posts with torrent links that gets updated over time (such as megathreads or ongoing event posts), letting you automate downloads without constant manual refreshing.
 
 - **Current Focus:**  
   **RMWatcher** only scans the *main body* of the specified post for changes or new links. It does not scan comments, subreddit feeds, or user pages.  
-  (Monitoring comments is *intentionally* excluded for now, as anyone can post in the comments — including potentially unsafe links. This keeps things secure and predictable.)
+  (Monitoring comments is *intentionally* excluded for now, as anyone can post anything in the comments — including potentially unsafe links. This keeps things secure and predictable.)
 
 - **Continuous Development:**  
   The app is in active development, with new features and expanded capabilities being added regularly.  
