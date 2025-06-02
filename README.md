@@ -6,12 +6,31 @@
 
 ---
 
+### How It Works
+
+**RMWatcher** is a tool for tracking posts that are updated over time (such as megathreads or ongoing event posts), letting you automate downloads without constant manual refreshing.
+
+- **Current Focus:**  
+  **RMWatcher** only scans the *main body* of the specified post for changes or new links. It does not scan comments, subreddit feeds, or user pages.  
+  (Monitoring comments is *intentionally* excluded for now, as anyone can post in the comments — including potentially unsafe links. This keeps things secure and predictable.)
+
+- **Continuous Development:**  
+  The app is in active development, with new features and expanded capabilities being added regularly.  
+  Monitoring additional page elements and safer handling of comments are planned, but will only be introduced with proper safeguards.
+
+**Have a suggestion or need a new feature?**  
+[Open an issue on GitHub](../../issues) or email [suggestions@svartklint.se](mailto:suggestions@svartklint.se) — feedback is always welcome!
+
+---
+
 ### Planned Features
 
-- Support for qBittorrent's Web API
-- Linux support
-- Ability to monitor any website section:  
-  Paste a URL and use a visual wizard to select which part of the page (element with a magnet/torrent link) you want to monitor—no technical knowledge required.
+- Support for monitoring all uploads by a user.
+- Support for qBittorrent's Web API which will allow for:
+  - Complete automation of downloads without having to supress torrent dialogs in the client options.
+  - A way to fetch metadata for torrents, making it easy for users to pick what to monitor in posts with multiple links.
+- Multi-Platform support
+- Ability to monitor any website using a visual wizard - no technical knowledge required.
 
 ---
 
