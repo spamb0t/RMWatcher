@@ -9,6 +9,7 @@
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Appicon_wpf.ico</ApplicationIcon>
     <PlatformTarget>AnyCPU</PlatformTarget>
+    <Version>0.2.5-a.11</Version>
   </PropertyGroup>
 
   <ItemGroup>
