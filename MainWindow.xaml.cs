@@ -10,6 +10,7 @@ using System.Windows.Threading;
 using System.Windows.Controls; // For ListBoxItem
 using System.Windows.Forms; // For NotifyIcon
 using System.Drawing;       // For Icon
+using System.Diagnostics;   // For Runtime Title
 using Microsoft.Win32;
 
 namespace RMWatcher
@@ -51,6 +52,12 @@ namespace RMWatcher
         {
             InitializeComponent();
 
+            // Get the current version from the assembly metadataAdd commentMore actions
+            string version = FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location).ProductVersion;
+
+            // Set the window title
+            this.Title = $"RMWatcher v{version}";
+            
             // Load settings
             LoadSettings();
             UrlList.Items.Clear();
