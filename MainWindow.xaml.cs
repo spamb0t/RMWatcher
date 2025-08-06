@@ -33,11 +33,24 @@ namespace RMWatcher
         private List<MonitoredUrl> monitoredUrls = new List<MonitoredUrl>();
         private bool isMonitoring = false;
         private readonly HttpClient http = new HttpClient();
+        private bool isAddingUrl = false;
 
         // == TRAY STATE ==
         private NotifyIcon trayIcon;
         private bool trulyClosing = false;
 
+
+        /// Ensures the User-Agent header is set correctly.
+        private void EnsureValidUserAgent()
+        {
+            var ua = http.DefaultRequestHeaders.UserAgent;
+            var uaString = string.Join(" ", ua.Select(p => p.ToString()));
+            if (uaString.Length > 256 || !uaString.Contains("RedditMagnetWatcher"))
+            {
+                ua.Clear();
+                ua.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) RedditMagnetWatcher/1.0");
+            }
+        }
         /// <summary>
         /// Represents a monitored URL and its last known content hash.
         /// You can expand this with per-URL settings later.
@@ -199,67 +212,82 @@ namespace RMWatcher
         // ==== UPDATED: Fetches Reddit post title from JSON API, shows in ListBox, URL on hover ====
         private async void AddUrl_Click(object sender, RoutedEventArgs e)
         {
-            var url = UrlInput.Text.Trim();
-            if (string.IsNullOrEmpty(url))
-            {
-                Log("Please enter a Reddit post URL.");
-                return;
-            }
-            if (monitoredUrls.Count >= MaxUrls)
-            {
-                Log($"You can only monitor up to {MaxUrls} URLs.");
-                return;
-            }
-            if (monitoredUrls.Any(x => x.Url == url))
-            {
-                Log("This URL is already being monitored.");
-                return;
-            }
-            if (!IsValidRedditPostUrl(url))
-            {
-                Log("Invalid Reddit post URL. Example: https://www.reddit.com/r/sub/comments/abc123/title/");
-                return;
-            }
-
-            // --- Fetch the real Reddit post title using the JSON API ---
-            string title = url;
+            if (isAddingUrl) return;
+            isAddingUrl = true;
+            AddBtn.IsEnabled = false;
             try
             {
-                // Reddit requires a User-Agent header or you'll get 429/403 errors
-                http.DefaultRequestHeaders.UserAgent.ParseAdd(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) RedditMagnetWatcher/1.0"
-                );
-                string jsonUrl = url.TrimEnd('/') + "/.json";
-                string json = await http.GetStringAsync(jsonUrl);
+                var url = UrlInput.Text.Trim();
+                if (string.IsNullOrEmpty(url))
+                {
+                    Log("Please enter a Reddit post URL.");
+                    return;
+                }
+                if (monitoredUrls.Count >= MaxUrls)
+                {
+                    Log($"You can only monitor up to {MaxUrls} URLs.");
+                    return;
+                }
+                if (monitoredUrls.Any(x => x.Url == url))
+                {
+                    Log("This URL is already being monitored.");
+                    return;
+                }
+                if (!IsValidRedditPostUrl(url))
+                {
+                    Log("Invalid Reddit post URL. Example: https://www.reddit.com/r/sub/comments/abc123/title/");
+                    return;
+                }
 
-                using var doc = JsonDocument.Parse(json);
-                // Path: [0].data.children[0].data.title
-                title = doc.RootElement[0]
-                            .GetProperty("data")
-                            .GetProperty("children")[0]
-                            .GetProperty("data")
-                            .GetProperty("title")
-                            .GetString() ?? "(No Title)";
+                // --- Fetch the real Reddit post title using the JSON API ---
+                string title = url;
+                try
+                {
+                    // Ensure the User-Agent is set correctly for Reddit API requests
+                    EnsureValidUserAgent();
+                    // Clear any existing User-Agent headers to avoid duplicates
+                    http.DefaultRequestHeaders.UserAgent.Clear();
+                    // Reddit requires a User-Agent header or you'll get 429/403 errors
+                    http.DefaultRequestHeaders.UserAgent.ParseAdd(
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) RedditMagnetWatcher/1.0"
+                    );
+                    string jsonUrl = url.TrimEnd('/') + "/.json";
+                    string json = await http.GetStringAsync(jsonUrl);
+
+                    using var doc = JsonDocument.Parse(json);
+                    // Path: [0].data.children[0].data.title
+                    title = doc.RootElement[0]
+                                .GetProperty("data")
+                                .GetProperty("children")[0]
+                                .GetProperty("data")
+                                .GetProperty("title")
+                                .GetString() ?? "(No Title)";
+                }
+                catch (Exception ex)
+                {
+                    title = "(Failed to load title)";
+                    Log($"Could not fetch post title: {ex.Message}");
+                }
+
+                monitoredUrls.Add(new MonitoredUrl { Url = url, LastContentHash = "" });
+                SaveSettings();
+
+                // --- Add ListBoxItem with title as Content, URL as ToolTip ---
+                var item = new System.Windows.Controls.ListBoxItem
+                {
+                    Content = title,
+                    ToolTip = url
+                };
+                UrlList.Items.Add(item);
+
+                UrlInput.Text = "";
+                Log($"Added: {title}");
             }
-            catch (Exception ex)
+            finally
             {
-                title = "(Failed to load title)";
-                Log($"Could not fetch post title: {ex.Message}");
+                isAddingUrl = false;
+                AddBtn.IsEnabled = true;
             }
-
-            monitoredUrls.Add(new MonitoredUrl { Url = url, LastContentHash = "" });
-            SaveSettings();
-
-            // --- Add ListBoxItem with title as Content, URL as ToolTip ---
-            var item = new System.Windows.Controls.ListBoxItem
-            {
-                Content = title,
-                ToolTip = url
-            };
-            UrlList.Items.Add(item);
-
-            UrlInput.Text = "";
-            Log($"Added: {title}");
         }
 
         // === Future feature: Remove a single URL from monitoring ===
@@ -512,9 +540,13 @@ namespace RMWatcher
 
                         try
                         {
-                            string jsonUrl = url.TrimEnd('/') + "/.json";
+                            /// Ensure the User-Agent is set correctly for Reddit API requests
+                            EnsureValidUserAgent();
+                            http.DefaultRequestHeaders.UserAgent.Clear();
                             http.DefaultRequestHeaders.UserAgent.ParseAdd("RMWatcher/0.2 (by spamb0t)");
-
+                            /// Ensure the URL ends with a slash for consistency
+                            string jsonUrl = url.TrimEnd('/') + "/.json";
+                            
                             var resp = await http.GetAsync(jsonUrl);
                             if (!resp.IsSuccessStatusCode)
                             {
