@@ -4,13 +4,14 @@ namespace RMWatcher
 {
     public partial class SettingsDialog : Window
     {
-        public string PreferredLinkType { get; set; }
-        public int PollingIntervalMinutes { get; set; }
-        public bool AutoRun { get; set; }
-        public bool CloseToTray { get; set; }
-        public bool AlwaysStartMinimized { get; set; }
+        public string PreferredLinkType { get; private set; }
+        public int PollingIntervalMinutes { get; private set; }
+        public bool AutoRun { get; private set; }
+        public bool CloseToTray { get; private set; }
+        public bool AlwaysStartMinimized { get; private set; }
+        public bool ResumeAfterReboot { get; private set; }
 
-        public SettingsDialog(string preferredType, int interval, bool autoRun, bool closeToTray, bool alwaysStartMinimized)
+        public SettingsDialog(string preferredType, int interval, bool autoRun, bool closeToTray, bool alwaysStartMinimized, bool resumeAfterReboot)
         {
             InitializeComponent();
 
@@ -23,7 +24,8 @@ namespace RMWatcher
             IntervalBox.Text = interval.ToString();
             AutoRunBox.IsChecked = autoRun;
             CloseTrayBox.IsChecked = closeToTray;
-            AlwaysMinBox.IsChecked = alwaysStartMinimized; // New!
+            AlwaysMinBox.IsChecked = alwaysStartMinimized;
+            ResumeBox.IsChecked = resumeAfterReboot;
         }
 
         private void OK_Click(object sender, RoutedEventArgs e)
@@ -51,6 +53,7 @@ namespace RMWatcher
             AutoRun = AutoRunBox.IsChecked == true;
             CloseToTray = CloseTrayBox.IsChecked == true;
             AlwaysStartMinimized = AlwaysMinBox.IsChecked == true;
+            ResumeAfterReboot = ResumeBox.IsChecked == true;
             this.DialogResult = true;
         }
 

@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Settings"
-        Height="340" Width="320"
+        Height="370" Width="320"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         SizeToContent="Height"
@@ -17,7 +17,7 @@
                           Color="#333"/>
     </Window.Resources>
     <Border Background="#F3F4F6" Padding="0" CornerRadius="10" Effect="{DynamicResource ShadowEffect}">
-        <StackPanel Margin="16" VerticalAlignment="Top" HorizontalAlignment="Stretch" >
+        <StackPanel Margin="16" VerticalAlignment="Top" HorizontalAlignment="Stretch">
 
             <!-- Preferred Link Type -->
             <TextBlock Text="Preferred Link Type" FontSize="13" Margin="0,2,0,4"/>
@@ -46,9 +46,26 @@
             <Border Background="White" CornerRadius="6" BorderBrush="#D1D5DB" BorderThickness="1" Padding="8,4,8,4" Margin="0,2,0,8"
                     Effect="{DynamicResource ShadowEffect}">
                 <StackPanel>
-                    <CheckBox x:Name="AutoRunBox" Content="Auto-run at startup" FontSize="12" Margin="0,2,0,2"/>
-                    <CheckBox x:Name="CloseTrayBox" Content="Minimize to tray on close" FontSize="12" Margin="0,2,0,2"/>
-                    <CheckBox x:Name="AlwaysMinBox" Content="Always launch minimized" FontSize="12" Margin="0,2,0,2"/>
+                    <CheckBox x:Name="AutoRunBox"
+                              Content="Auto-run at startup"
+                              FontSize="12"
+                              Margin="0,2,0,2"
+                              ToolTip="Registers RMWatcher in your user Run registry key so it launches with Windows using the minimized flag."/>
+                    <CheckBox x:Name="ResumeBox"
+                              Content="Resume after reboot"
+                              FontSize="12"
+                              Margin="0,2,0,2"
+                              ToolTip="If RMWatcher is running when Windows shuts down or reboots, Windows can relaunch it the next time you sign in."/>
+                    <CheckBox x:Name="CloseTrayBox"
+                              Content="Minimize to tray on close"
+                              FontSize="12"
+                              Margin="0,2,0,2"
+                              ToolTip="Clicking the window Close button hides RMWatcher to the system tray instead of exiting."/>
+                    <CheckBox x:Name="AlwaysMinBox"
+                              Content="Always launch minimized"
+                              FontSize="12"
+                              Margin="0,2,0,2"
+                              ToolTip="Starts RMWatcher minimized even when you launch it manually."/>
                 </StackPanel>
             </Border>
 

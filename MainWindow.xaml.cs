@@ -12,6 +12,7 @@ using System.Windows.Forms; // For NotifyIcon
 using System.Drawing;       // For Icon
 using System.Diagnostics;   // For Runtime Title
 using Microsoft.Win32;
+using System.Runtime.InteropServices; // For RegisterApplicationRestart / UnregisterApplicationRestart
 
 namespace RMWatcher
 {
@@ -23,6 +24,7 @@ namespace RMWatcher
         private bool autoRun = false;
         private bool closeToTray = false;
         private bool alwaysStartMinimized = false;
+        private bool resumeAfterReboot = false;
         private const string AppName = "RMWatcher";
         private static string SettingsFile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RMWatcher", "settings.json");
 
@@ -33,10 +35,23 @@ namespace RMWatcher
         private List<MonitoredUrl> monitoredUrls = new List<MonitoredUrl>();
         private bool isMonitoring = false;
         private readonly HttpClient http = new HttpClient();
+        private bool isAddingUrl = false;
 
         // == TRAY STATE ==
         private NotifyIcon trayIcon;
         private bool trulyClosing = false;
+
+        /// Ensures the User-Agent header is set correctly.
+        private void EnsureValidUserAgent()
+        {
+            var ua = http.DefaultRequestHeaders.UserAgent;
+            var uaString = string.Join(" ", ua.Select(p => p.ToString()));
+            if (uaString.Length > 256 || !uaString.Contains("RedditMagnetWatcher"))
+            {
+                ua.Clear();
+                ua.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) RedditMagnetWatcher/1.0");
+            }
+        }
 
         /// <summary>
         /// Represents a monitored URL and its last known content hash.
@@ -48,6 +63,7 @@ namespace RMWatcher
             public string LastContentHash { get; set; } = "";
             // Future-proof: add interval, label, group, etc. here
         }
+
         public MainWindow()
         {
             InitializeComponent();
@@ -57,7 +73,7 @@ namespace RMWatcher
 
             // Set the window title
             this.Title = $"RMWatcher v{version}";
-        
+
             // Load settings
             LoadSettings();
             UrlList.Items.Clear();
@@ -147,14 +163,25 @@ namespace RMWatcher
         }
 
         /// <summary>
-        /// Exits the application completely, disposing the tray icon.
+        /// Requests a real application exit.
+        /// The actual cleanup is centralized in OnClosing so every close path uses the same logic.
         /// </summary>
         private void ExitApp()
         {
             trulyClosing = true;
-            trayIcon.Visible = false;
-            trayIcon.Dispose();
-            System.Windows.Application.Current.Shutdown();
+            this.Close();
+        }
+
+        /// <summary>
+        /// Hides and disposes the tray icon safely.
+        /// </summary>
+        private void CleanupTrayIcon()
+        {
+            if (trayIcon != null)
+            {
+                trayIcon.Visible = false;
+                trayIcon.Dispose();
+            }
         }
 
         /// <summary>
@@ -170,96 +197,107 @@ namespace RMWatcher
         }
 
         /// <summary>
-        /// Handles "close to tray" logic: if enabled, hides window instead of exiting.
+        /// Handles close-to-tray logic and real application shutdown.
+        /// This is the single authoritative shutdown path for manual exits.
         /// </summary>
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
             if (!trulyClosing && closeToTray)
             {
-                e.Cancel = true;           // Cancel the actual close event
-                HideToTray(fromClose: true); // Hide window, notify user
+                e.Cancel = true;              // Cancel the actual close event
+                HideToTray(fromClose: true);  // Hide window, notify user
+                return;
             }
-            else
-            {
-                trayIcon.Visible = false;  // Fully exit, remove tray icon
-                trayIcon.Dispose();
-                base.OnClosing(e);
-            }
+
+            // Manual / explicit exit path: make sure this process is not left registered for restart.
+            DisableResumeAfterReboot();
+            CleanupTrayIcon();
+            base.OnClosing(e);
         }
 
         #endregion
-
-
-        // Add this line to the MainWindow constructor (after SetupTrayIcon):
-        // this.StateChanged += MainWindow_StateChanged;
-
 
         #region UI Event Handlers
 
         // ==== UPDATED: Fetches Reddit post title from JSON API, shows in ListBox, URL on hover ====
         private async void AddUrl_Click(object sender, RoutedEventArgs e)
         {
-            var url = UrlInput.Text.Trim();
-            if (string.IsNullOrEmpty(url))
-            {
-                Log("Please enter a Reddit post URL.");
-                return;
-            }
-            if (monitoredUrls.Count >= MaxUrls)
-            {
-                Log($"You can only monitor up to {MaxUrls} URLs.");
-                return;
-            }
-            if (monitoredUrls.Any(x => x.Url == url))
-            {
-                Log("This URL is already being monitored.");
-                return;
-            }
-            if (!IsValidRedditPostUrl(url))
-            {
-                Log("Invalid Reddit post URL. Example: https://www.reddit.com/r/sub/comments/abc123/title/");
-                return;
-            }
-
-            // --- Fetch the real Reddit post title using the JSON API ---
-            string title = url;
+            if (isAddingUrl) return;
+            isAddingUrl = true;
+            AddBtn.IsEnabled = false;
             try
             {
-                // Reddit requires a User-Agent header or you'll get 429/403 errors
-                http.DefaultRequestHeaders.UserAgent.ParseAdd(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) RedditMagnetWatcher/1.0"
-                );
-                string jsonUrl = url.TrimEnd('/') + "/.json";
-                string json = await http.GetStringAsync(jsonUrl);
+                var url = UrlInput.Text.Trim();
+                if (string.IsNullOrEmpty(url))
+                {
+                    Log("Please enter a Reddit post URL.");
+                    return;
+                }
+                if (monitoredUrls.Count >= MaxUrls)
+                {
+                    Log($"You can only monitor up to {MaxUrls} URLs.");
+                    return;
+                }
+                if (monitoredUrls.Any(x => x.Url == url))
+                {
+                    Log("This URL is already being monitored.");
+                    return;
+                }
+                if (!IsValidRedditPostUrl(url))
+                {
+                    Log("Invalid Reddit post URL. Example: https://www.reddit.com/r/sub/comments/abc123/title/");
+                    return;
+                }
 
-                using var doc = JsonDocument.Parse(json);
-                // Path: [0].data.children[0].data.title
-                title = doc.RootElement[0]
-                            .GetProperty("data")
-                            .GetProperty("children")[0]
-                            .GetProperty("data")
-                            .GetProperty("title")
-                            .GetString() ?? "(No Title)";
+                // --- Fetch the real Reddit post title using the JSON API ---
+                string title = url;
+                try
+                {
+                    // Ensure the User-Agent is set correctly for Reddit API requests
+                    EnsureValidUserAgent();
+                    // Clear any existing User-Agent headers to avoid duplicates
+                    http.DefaultRequestHeaders.UserAgent.Clear();
+                    // Reddit requires a User-Agent header or you'll get 429/403 errors
+                    http.DefaultRequestHeaders.UserAgent.ParseAdd(
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) RedditMagnetWatcher/1.0"
+                    );
+                    string jsonUrl = url.TrimEnd('/') + "/.json";
+                    string json = await http.GetStringAsync(jsonUrl);
+
+                    using var doc = JsonDocument.Parse(json);
+                    // Path: [0].data.children[0].data.title
+                    title = doc.RootElement[0]
+                                .GetProperty("data")
+                                .GetProperty("children")[0]
+                                .GetProperty("data")
+                                .GetProperty("title")
+                                .GetString() ?? "(No Title)";
+                }
+                catch (Exception ex)
+                {
+                    title = "(Failed to load title)";
+                    Log($"Could not fetch post title: {ex.Message}");
+                }
+
+                monitoredUrls.Add(new MonitoredUrl { Url = url, LastContentHash = "" });
+                SaveSettings();
+
+                // --- Add ListBoxItem with title as Content, URL as ToolTip ---
+                var item = new System.Windows.Controls.ListBoxItem
+                {
+                    Content = title,
+                    ToolTip = url
+                };
+                UrlList.Items.Add(item);
+
+                UrlInput.Text = "";
+                Log($"Added: {title}");
             }
-            catch (Exception ex)
+            finally
             {
-                title = "(Failed to load title)";
-                Log($"Could not fetch post title: {ex.Message}");
+                isAddingUrl = false;
+                AddBtn.IsEnabled = true;
             }
-
-            monitoredUrls.Add(new MonitoredUrl { Url = url, LastContentHash = "" });
-            SaveSettings();
-
-            // --- Add ListBoxItem with title as Content, URL as ToolTip ---
-            var item = new System.Windows.Controls.ListBoxItem
-            {
-                Content = title,
-                ToolTip = url
-            };
-            UrlList.Items.Add(item);
-
-            UrlInput.Text = "";
-            Log($"Added: {title}");
         }
 
         // === Future feature: Remove a single URL from monitoring ===
@@ -293,11 +331,12 @@ namespace RMWatcher
             SaveSettings();
             Log("Cleared all URLs and reset state.");
         }
-        
+
         private void UrlList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             ClearSelectedBtn.IsEnabled = UrlList.SelectedItems.Count > 0;
         }
+
         private void ClearSelectedBtn_Click(object sender, RoutedEventArgs e)
         {
             // Make a copy to avoid collection modification issues
@@ -325,7 +364,6 @@ namespace RMWatcher
                 LogUI($"Cleared {removedCount} URL{(removedCount > 1 ? "s" : "")} from monitoring.");
             }
         }
-
 
         private void StartBtn_Click(object sender, RoutedEventArgs e)
         {
@@ -360,7 +398,7 @@ namespace RMWatcher
 
         private void ShowSettings()
         {
-            var dlg = new SettingsDialog(preferredLinkType, pollIntervalMin, autoRun, closeToTray, alwaysStartMinimized)
+            var dlg = new SettingsDialog(preferredLinkType, pollIntervalMin, autoRun, closeToTray, alwaysStartMinimized, resumeAfterReboot)
             {
                 Owner = this
             };
@@ -370,7 +408,8 @@ namespace RMWatcher
                 pollIntervalMin = dlg.PollingIntervalMinutes;
                 autoRun = dlg.AutoRun;
                 closeToTray = dlg.CloseToTray;
-                alwaysStartMinimized = dlg.AlwaysStartMinimized; // New!
+                alwaysStartMinimized = dlg.AlwaysStartMinimized;
+                resumeAfterReboot = dlg.ResumeAfterReboot;
                 SaveSettings();
 
                 if (autoRun)
@@ -378,7 +417,12 @@ namespace RMWatcher
                 else
                     DisableAutoRun();
 
-                LogUI($"Settings updated: Link type = {preferredLinkType}, Interval = {pollIntervalMin} min, Auto-run = {autoRun}, Close to tray = {closeToTray}, Always start minimized = {alwaysStartMinimized}");
+                // We only register for restart during Windows shutdown / reboot.
+                // If the option has been turned off, explicitly unregister this process as a safety cleanup.
+                if (!resumeAfterReboot)
+                    DisableResumeAfterReboot();
+
+                LogUI($"Settings updated: Link type = {preferredLinkType}, Interval = {pollIntervalMin} min, Auto-run = {autoRun}, Close to tray = {closeToTray}, Always start minimized = {alwaysStartMinimized}, Resume after reboot = {resumeAfterReboot}");
             }
         }
 
@@ -389,9 +433,9 @@ namespace RMWatcher
             public bool AutoRun { get; set; }
             public bool CloseToTray { get; set; }
             public bool AlwaysStartMinimized { get; set; }
+            public bool ResumeAfterReboot { get; set; }
             public List<MonitoredUrl> MonitoredUrls { get; set; } = new List<MonitoredUrl>(); // Saves all monitored URL in the user settings
         }
-
 
         private void SaveSettings()
         {
@@ -402,6 +446,7 @@ namespace RMWatcher
                 AutoRun = autoRun,
                 CloseToTray = closeToTray,
                 AlwaysStartMinimized = alwaysStartMinimized,
+                ResumeAfterReboot = resumeAfterReboot,
                 MonitoredUrls = monitoredUrls
             };
             try
@@ -417,7 +462,6 @@ namespace RMWatcher
             }
         }
 
-
         private void LoadSettings()
         {
             if (File.Exists(SettingsFile))
@@ -431,6 +475,7 @@ namespace RMWatcher
                     autoRun = data.AutoRun;
                     closeToTray = data.CloseToTray;
                     alwaysStartMinimized = data.AlwaysStartMinimized;
+                    resumeAfterReboot = data.ResumeAfterReboot;
                     monitoredUrls = data.MonitoredUrls ?? new List<MonitoredUrl>();
                 }
                 catch (Exception ex)
@@ -444,6 +489,7 @@ namespace RMWatcher
                     autoRun = false;
                     closeToTray = false;
                     alwaysStartMinimized = false;
+                    resumeAfterReboot = false;
                     monitoredUrls = new List<MonitoredUrl>();
                 }
 
@@ -456,6 +502,7 @@ namespace RMWatcher
                 autoRun = false;
                 closeToTray = false;
                 alwaysStartMinimized = false;
+                resumeAfterReboot = false;
                 monitoredUrls = new List<MonitoredUrl>();
             }
         }
@@ -484,6 +531,39 @@ namespace RMWatcher
 
         #endregion
 
+        #region Resume-after-reboot (Application Restart API)
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern uint RegisterApplicationRestart(string commandLineArgs, int flags);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern uint UnregisterApplicationRestart();
+
+        /// <summary>
+        /// Registers the application for automatic restart after a Windows shutdown / reboot.
+        /// The app is restarted with the --minimized flag so it returns silently.
+        /// </summary>
+        public void EnableResumeAfterReboot()
+        {
+            string args = "--minimized";
+            RegisterApplicationRestart(args, 0);
+        }
+
+        /// <summary>
+        /// Unregisters the application from automatic restart for the current process.
+        /// </summary>
+        public void DisableResumeAfterReboot()
+        {
+            UnregisterApplicationRestart();
+        }
+
+        /// <summary>
+        /// Exposes the current Resume-after-reboot setting to App.xaml.cs.
+        /// </summary>
+        public bool ResumeAfterReboot => resumeAfterReboot;
+
+        #endregion
+
         #region Polling & Link Detection
 
         private bool IsValidRedditPostUrl(string url)
@@ -505,15 +585,19 @@ namespace RMWatcher
                 while (isMonitoring)
                 {
                     bool settingsChanged = false; // Track if we need to save settings
-                    
+
                     foreach (var entry in monitoredUrls) // Loop over each monitored URL object
                     {
                         string url = entry.Url; // Use the stored URL
 
                         try
                         {
-                            string jsonUrl = url.TrimEnd('/') + "/.json";
+                            /// Ensure the User-Agent is set correctly for Reddit API requests
+                            EnsureValidUserAgent();
+                            http.DefaultRequestHeaders.UserAgent.Clear();
                             http.DefaultRequestHeaders.UserAgent.ParseAdd("RMWatcher/0.2 (by spamb0t)");
+                            /// Ensure the URL ends with a slash for consistency
+                            string jsonUrl = url.TrimEnd('/') + "/.json";
 
                             var resp = await http.GetAsync(jsonUrl);
                             if (!resp.IsSuccessStatusCode)
@@ -605,11 +689,11 @@ namespace RMWatcher
                     }
 
                     // Wait for the user-set interval (in minutes), but allow early stop
-                        for (int i = 0; i < pollIntervalMin * 60; i++)
-                        {
-                            if (!isMonitoring) break;
-                            await System.Threading.Tasks.Task.Delay(1000);
-                        }
+                    for (int i = 0; i < pollIntervalMin * 60; i++)
+                    {
+                        if (!isMonitoring) break;
+                        await System.Threading.Tasks.Task.Delay(1000);
+                    }
                 }
             });
         }
@@ -626,6 +710,7 @@ namespace RMWatcher
             var m = Regex.Match(selftext, @"https?://\S+\.torrent");
             return m.Success ? m.Value : null;
         }
+
         /// <summary>
         /// Computes a SHA256 hash for change detection.
         /// </summary>
@@ -638,6 +723,7 @@ namespace RMWatcher
                 return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
             }
         }
+
         #endregion
 
         #region Logging

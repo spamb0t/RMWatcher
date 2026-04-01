@@ -67,6 +67,10 @@
 
 ## Version History
 
+- **0.2.6-alpha**
+  - Added new option: "Resume-on-restart" which resumes RMWatcher if you or Windows initiates a shutdown or restart without closing the app. Great for those who want to keep it open during a weekend or so, but not have it constantly start with Windows.
+  - Make one authoratative shutdown path.
+
 - **0.2.5-a.11**
   - URLs and their content saved (using a hash) between sessions.
   - Fixes to code to streamline workflow, making updates easier and faster.

@@ -46,6 +46,7 @@
                          BorderThickness="1"
                          Padding="6,1"/>
                 <Button Content="Add"
+                        x:Name="AddBtn"
                         Width="56" Height="28"
                         Grid.Column="1"
                         Click="AddUrl_Click"/>
