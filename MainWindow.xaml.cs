@@ -54,6 +54,31 @@ namespace RMWatcher
         }
 
         /// <summary>
+        /// Gets the path to the currently running executable.
+        /// Environment.ProcessPath is safe for single-file published apps.
+        /// </summary>
+        private static string? GetCurrentExecutablePath()
+        {
+            return Environment.ProcessPath;
+        }
+
+        /// <summary>
+        /// Gets the product version from the running executable.
+        /// Falls back to "Unknown" if the executable path cannot be determined.
+        /// </summary>
+        private static string GetDisplayVersion()
+        {
+            string? exePath = GetCurrentExecutablePath();
+
+            if (!string.IsNullOrWhiteSpace(exePath))
+            {
+                return FileVersionInfo.GetVersionInfo(exePath).ProductVersion ?? "Unknown";
+            }
+
+            return "Unknown";
+        }
+
+        /// <summary>
         /// Represents a monitored URL and its last known content hash.
         /// You can expand this with per-URL settings later.
         /// </summary>
@@ -68,8 +93,8 @@ namespace RMWatcher
         {
             InitializeComponent();
 
-            // Get the current version from the assembly metadata
-            string version = FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location).ProductVersion;
+            // Get the current version from the running executable
+            string version = GetDisplayVersion();
 
             // Set the window title
             this.Title = $"RMWatcher v{version}";
@@ -513,10 +538,19 @@ namespace RMWatcher
 
         private void EnableAutoRun()
         {
-            string exePath = $"\"{System.Reflection.Assembly.GetExecutingAssembly().Location}\" --minimized";
+            string? exePath = GetCurrentExecutablePath();
+
+            if (string.IsNullOrWhiteSpace(exePath))
+            {
+                LogUI("Failed to enable auto-run: executable path could not be determined.");
+                return;
+            }
+
+            string command = $"\"{exePath}\" --minimized";
+
             using (var key = Registry.CurrentUser.CreateSubKey(RunRegKey))
             {
-                key.SetValue(AppName, exePath);
+                key.SetValue(AppName, command);
             }
         }
 
